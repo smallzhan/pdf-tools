@@ -930,8 +930,10 @@ See also `pdf-view-use-imagemagick'."
 
 (defun pdf-view-use-scaling-p ()
   "Return t if scaling should be used."
-  (and (memq (pdf-view-image-type)
-             '(imagemagick image-io))
+  (and (or (and (eq (framep-on-display) 'ns)
+                (>= emacs-major-version 27))
+           (memq (pdf-view-image-type)
+                 '(imagemagick image-io)))
        pdf-view-use-scaling))
 
 (defmacro pdf-view-create-image (data &rest props)
@@ -950,15 +952,16 @@ See also `pdf-view-use-imagemagick'."
 (defun pdf-view-create-page (page &optional window)
   "Create an image of PAGE for display on WINDOW."
   (let* ((size (pdf-view-desired-image-size page window))
-         (data (pdf-cache-renderpage
-                page (car size)
-                (if (not (pdf-view-use-scaling-p))
+         (width (if (not (pdf-view-use-scaling-p))
                     (car size)
-                  (* 2 (car size)))))
+                  (* 2 (car size))))
+         (data (pdf-cache-renderpage
+                page width width))
          (hotspots (pdf-view-apply-hotspot-functions
                     window page size)))
     (pdf-view-create-image data
-      :width (car size)
+      :width width
+      :scale (if (pdf-view-use-scaling-p) 0.5 1)
       :map hotspots
       :pointer 'arrow)))
 
